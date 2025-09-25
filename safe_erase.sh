@@ -193,3 +193,5 @@ run_confirmed "sudo rm -rf /root/.local/share/Trash/*"
 
 echo -e "${GREEN}Wipe process complete.${NC}" 
 
+#hey changes here
+
