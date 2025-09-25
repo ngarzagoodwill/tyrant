@@ -191,5 +191,5 @@ fi
 echo "Cleaning root Trash..."
 run_confirmed "sudo rm -rf /root/.local/share/Trash/*"
 
-echo -e "${GREEN}Wipe process complete.${NC}" 
+echo -e "${GREEN}Wipe process complete.${NC}"
 
