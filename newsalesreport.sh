@@ -237,59 +237,24 @@ else
   inxi -N | grep -qi "Wireless" && echo "Has Wi-Fi" >> "$OUTPUT_FILE" || echo "No Wi-Fi detected" >> "$OUTPUT_FILE"
 fi
 
-# ------------------ Bluetooth Capability (Strict) ------------------
+# ------------------ Bluetooth Capability (Strict Only) ------------------
 echo "" >> "$OUTPUT_FILE"
 echo "Bluetooth Capability:" >> "$OUTPUT_FILE"
 
 HAS_BLUETOOTH="No Bluetooth detected"
 
-# 1. Check for active Bluetooth hardware using hciconfig (most reliable)
+# 1. Strictest check: Use hciconfig to find active Bluetooth interfaces
 if command -v hciconfig >/dev/null 2>&1; then
   if hciconfig -a | grep -q '^hci'; then
     HAS_BLUETOOTH="Has Bluetooth"
   fi
 fi
 
-# 2. Check with bluetoothctl (fallback)
-if [[ "$HAS_BLUETOOTH" == "No Bluetooth detected" ]]; then
-  if command -v bluetoothctl >/dev/null 2>&1; then
-    if command -v timeout >/dev/null 2>&1; then
-      BT_LIST=$(timeout 2 bluetoothctl list 2>/dev/null)
-    else
-      BT_LIST=$(bluetoothctl list 2>/dev/null)
-    fi
-
-    if echo "$BT_LIST" | grep -q '^Controller'; then
-      HAS_BLUETOOTH="Has Bluetooth"
-    fi
-  fi
-fi
-
-# 3. Check sysfs for Bluetooth devices (fallback)
-if [[ "$HAS_BLUETOOTH" == "No Bluetooth detected" ]]; then
-  if [[ -d /sys/class/bluetooth ]]; then
-    shopt -s nullglob
-    bt_devices=(/sys/class/bluetooth/hci*)
-    if (( ${#bt_devices[@]} > 0 )); then
-      HAS_BLUETOOTH="Has Bluetooth"
-    fi
-    shopt -u nullglob
-  fi
-fi
-
-# 4. Check inxi output (least reliable)
-if [[ "$HAS_BLUETOOTH" == "No Bluetooth detected" ]]; then
-  if command -v inxi >/dev/null 2>&1; then
-    if inxi -E 2>/dev/null | grep -qi 'Bluetooth'; then
-      HAS_BLUETOOTH="Has Bluetooth"
-    fi
-  fi
-fi
+# Optional: Log why it failed (for debugging)
+# echo "hciconfig check: $HAS_BLUETOOTH" >> "$OUTPUT_FILE"
 
 # Final output
 echo "$HAS_BLUETOOTH" >> "$OUTPUT_FILE"
-
-
 
 # ------------------ Touchscreen Prompt ------------------
 echo -n "Does the device have a touchscreen? (y/N): "
