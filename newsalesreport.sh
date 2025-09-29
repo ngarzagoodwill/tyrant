@@ -237,36 +237,58 @@ else
   inxi -N | grep -qi "Wireless" && echo "Has Wi-Fi" >> "$OUTPUT_FILE" || echo "No Wi-Fi detected" >> "$OUTPUT_FILE"
 fi
 
-# ------------------ Bluetooth Capability (Safe) ------------------
+# ------------------ Bluetooth Capability (Strict) ------------------
 echo "" >> "$OUTPUT_FILE"
 echo "Bluetooth Capability:" >> "$OUTPUT_FILE"
 
 HAS_BLUETOOTH="No Bluetooth detected"
 
-# Check with bluetoothctl
-if command -v bluetoothctl >/dev/null 2>&1; then
-  BT_LIST=$(timeout 2 bluetoothctl list 2>/dev/null)
-  if [[ -n "$BT_LIST" ]]; then
+# 1. Check for active Bluetooth hardware using hciconfig (most reliable)
+if command -v hciconfig >/dev/null 2>&1; then
+  if hciconfig -a | grep -q '^hci'; then
     HAS_BLUETOOTH="Has Bluetooth"
   fi
 fi
 
-# Check sysfs for Bluetooth class (only if not detected yet)
+# 2. Check with bluetoothctl (fallback)
 if [[ "$HAS_BLUETOOTH" == "No Bluetooth detected" ]]; then
-  if [[ -d /sys/class/bluetooth ]] && ls /sys/class/bluetooth/hci* &>/dev/null; then
-    HAS_BLUETOOTH="Has Bluetooth"
+  if command -v bluetoothctl >/dev/null 2>&1; then
+    if command -v timeout >/dev/null 2>&1; then
+      BT_LIST=$(timeout 2 bluetoothctl list 2>/dev/null)
+    else
+      BT_LIST=$(bluetoothctl list 2>/dev/null)
+    fi
+
+    if echo "$BT_LIST" | grep -q '^Controller'; then
+      HAS_BLUETOOTH="Has Bluetooth"
+    fi
   fi
 fi
 
-# Check inxi output (only if still not detected)
+# 3. Check sysfs for Bluetooth devices (fallback)
 if [[ "$HAS_BLUETOOTH" == "No Bluetooth detected" ]]; then
-  if command -v inxi >/dev/null 2>&1 && inxi -E 2>/dev/null | grep -qi 'Bluetooth'; then
-    HAS_BLUETOOTH="Has Bluetooth"
+  if [[ -d /sys/class/bluetooth ]]; then
+    shopt -s nullglob
+    bt_devices=(/sys/class/bluetooth/hci*)
+    if (( ${#bt_devices[@]} > 0 )); then
+      HAS_BLUETOOTH="Has Bluetooth"
+    fi
+    shopt -u nullglob
+  fi
+fi
+
+# 4. Check inxi output (least reliable)
+if [[ "$HAS_BLUETOOTH" == "No Bluetooth detected" ]]; then
+  if command -v inxi >/dev/null 2>&1; then
+    if inxi -E 2>/dev/null | grep -qi 'Bluetooth'; then
+      HAS_BLUETOOTH="Has Bluetooth"
+    fi
   fi
 fi
 
 # Final output
 echo "$HAS_BLUETOOTH" >> "$OUTPUT_FILE"
+
 
 
 # ------------------ Touchscreen Prompt ------------------
