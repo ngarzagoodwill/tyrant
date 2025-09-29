@@ -9,68 +9,75 @@ fi
 while true; do
     echo "🔍 Detecting available drives..."
 
-    # Get list of drives (names only)
-    drives=($(lsblk -d -o NAME,SIZE,MODEL | grep -E '^sd|^nvme' | awk '{print $1}'))
+    # Get list of drives with size and model (filter sd* and nvme*)
+    mapfile -t drives < <(lsblk -dn -o NAME,SIZE,MODEL,TYPE | grep 'disk')
 
-    # Display drives with numbers
+    if [ ${#drives[@]} -eq 0 ]; then
+        echo "❌ No drives found."
+        exit 1
+    fi
+
+    # Display drives with size and model
     for i in "${!drives[@]}"; do
-        name=${drives[$i]}
-        info=$(lsblk -d -o NAME,SIZE,MODEL | grep "^$name")
-        echo "$((i+1))) $info"
+        # Parse info line: NAME SIZE MODEL TYPE
+        read -r name size model type <<< "${drives[i]}"
+        if [ -z "$model" ]; then
+            echo "$((i+1))) $name  Size: $size"
+        else
+            echo "$((i+1))) $name  Size: $size  Model: $model"
+        fi
     done
 
     # Ask user to select drive by number
-    read -p "Enter the number of the drive to check: " selection
+    read -rp "Enter the number of the drive to check: " selection
 
     # Validate input
-    if ! [[ "$selection" =~ ^[0-9]+$ ]] || [ "$selection" -lt 1 ] || [ "$selection" -gt "${#drives[@]}" ]; then
+    if ! [[ "$selection" =~ ^[0-9]+$ ]] || (( selection < 1 || selection > ${#drives[@]} )); then
         echo "❌ Invalid selection."
         continue
     fi
 
-    drive=${drives[$((selection-1))]}
+    drive=$(echo "${drives[$((selection - 1))]}" | awk '{print $1}')
     DEVICE="/dev/$drive"
 
-    # Check if device exists
     if [ ! -b "$DEVICE" ]; then
         echo "❌ Device $DEVICE not found."
         continue
     fi
 
-    if [[ "$drive" == nvme* ]]; then
-        echo "📋 Detected NVMe drive. Displaying full SMART info..."
-        sudo smartctl -a "$DEVICE"
-        echo "▶️ Finished displaying SMART data."
-    else
-        echo "📋 Checking SMART support on $DEVICE..."
-        smartctl -i "$DEVICE" | grep -q "SMART support is: Enabled"
+    # List of device types to try with smartctl for better compatibility
+    device_types=( "auto" "nvme" "sat" "ata" )
 
-        if [ $? -ne 0 ]; then
-            echo "⚠️ SMART not enabled. Trying to enable it..."
-            sudo smartctl -s on "$DEVICE"
-            sleep 1
+    smart_supported=false
+    smartctl_device_type="auto"
+
+    echo "📋 Checking SMART support on $DEVICE..."
+
+    for dt in "${device_types[@]}"; do
+        if sudo smartctl -i -d "$dt" "$DEVICE" 2>/dev/null | grep -q "SMART support is: Enabled"; then
+            smart_supported=true
+            smartctl_device_type="$dt"
+            break
         fi
+    done
 
-        smartctl -i "$DEVICE" | grep -q "SMART support is: Enabled"
-        if [ $? -ne 0 ]; then
-            echo "❌ SMART not supported or cannot be enabled on $DEVICE."
-            continue
-        fi
-
-        echo "🩺 Running SMART health test..."
-        sudo smartctl -H "$DEVICE"
-
-        read -p "Do you want to see full SMART data? (y/n): " show_details
-        if [[ "$show_details" =~ ^[Yy]$ ]]; then
-            sudo smartctl -a "$DEVICE"
-            echo "▶️ Finished displaying SMART data."
-        else
-            echo "✅ Basic health check completed."
-        fi
+    if ! $smart_supported ; then
+        echo "❌ SMART not supported or cannot be enabled on $DEVICE."
+        continue
     fi
 
-    # Ask if user wants to check another drive
-    read -p "Do you want to check another drive? (y/n): " again
+    echo "🩺 Running SMART health test (device type: $smartctl_device_type)..."
+    sudo smartctl -H -d "$smartctl_device_type" "$DEVICE"
+
+    read -rp "Do you want to see full SMART data? (y/n): " show_details
+    if [[ "$show_details" =~ ^[Yy]$ ]]; then
+        sudo smartctl -a -d "$smartctl_device_type" "$DEVICE"
+        echo "▶️ Finished displaying SMART data."
+    else
+        echo "✅ Basic health check completed."
+    fi
+
+    read -rp "Do you want to check another drive? (y/n): " again
     if [[ ! "$again" =~ ^[Yy]$ ]]; then
         echo "Goodbye!"
         exit 0
