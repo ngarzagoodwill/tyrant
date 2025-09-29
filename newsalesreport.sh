@@ -251,14 +251,14 @@ if command -v bluetoothctl >/dev/null 2>&1; then
   fi
 fi
 
-# Check sysfs for Bluetooth class
+# Check sysfs for Bluetooth class (only if not detected yet)
 if [[ "$HAS_BLUETOOTH" == "No Bluetooth detected" ]]; then
-  if [[ -d /sys/class/bluetooth ]] && [[ -n "$(ls /sys/class/bluetooth 2>/dev/null)" ]]; then
+  if [[ -d /sys/class/bluetooth ]] && ls /sys/class/bluetooth/hci* &>/dev/null; then
     HAS_BLUETOOTH="Has Bluetooth"
   fi
 fi
 
-# Check inxi output
+# Check inxi output (only if still not detected)
 if [[ "$HAS_BLUETOOTH" == "No Bluetooth detected" ]]; then
   if command -v inxi >/dev/null 2>&1 && inxi -E 2>/dev/null | grep -qi 'Bluetooth'; then
     HAS_BLUETOOTH="Has Bluetooth"
@@ -267,6 +267,7 @@ fi
 
 # Final output
 echo "$HAS_BLUETOOTH" >> "$OUTPUT_FILE"
+
 
 # ------------------ Touchscreen Prompt ------------------
 echo -n "Does the device have a touchscreen? (y/N): "
