@@ -22,8 +22,8 @@ while true; do
     # Extract device path (first field)
     DEVICE=$(echo "${devices[$choice]}" | awk '{print $1}')
 
-    # Get size of selected block device
-    SIZE=$(blockdev --getsize64 "$DEVICE")
+    # Get size of selected block device (using sudo)
+    SIZE=$(sudo blockdev --getsize64 "$DEVICE")
 
     echo -e "\nDevice: $DEVICE"
     echo "Size: $SIZE bytes"
@@ -35,6 +35,11 @@ while true; do
     MIDDLE_OFFSET=$((SIZE / 2))
     THREE_QUARTER_OFFSET=$((3 * SIZE / 4))
     END_OFFSET=$((SIZE - BYTES_TO_READ))
+
+    # Prevent negative offset if device smaller than BYTES_TO_READ
+    if [ $END_OFFSET -lt 0 ]; then
+      END_OFFSET=0
+    fi
 
     # Run hexdump at different offsets with sudo
     echo -e "\n=== START OF DEVICE (offset $START_OFFSET) ==="
