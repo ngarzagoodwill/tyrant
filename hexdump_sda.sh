@@ -2,12 +2,6 @@
 
 BYTES_TO_READ=256
 
-# Check if running as root
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run as root (use sudo)."
-  exit 1
-fi
-
 while true; do
     # Get list of drives + partitions (exclude loop, ram, etc.)
     mapfile -t devices < <(lsblk -lnpo NAME,SIZE,TYPE,MOUNTPOINT | awk '$3 == "disk" {printf "%s %s [%s]", $1, $2, $3; if ($4) printf " mounted at %s", $4; print ""}')
@@ -42,21 +36,21 @@ while true; do
     THREE_QUARTER_OFFSET=$((3 * SIZE / 4))
     END_OFFSET=$((SIZE - BYTES_TO_READ))
 
-    # Run hexdump at different offsets
+    # Run hexdump at different offsets with sudo
     echo -e "\n=== START OF DEVICE (offset $START_OFFSET) ==="
-    hexdump -n $BYTES_TO_READ -s $START_OFFSET -C "$DEVICE"
+    sudo hexdump -n $BYTES_TO_READ -s $START_OFFSET -C "$DEVICE"
 
     echo -e "\n=== QUARTER WAY (offset $QUARTER_OFFSET) ==="
-    hexdump -n $BYTES_TO_READ -s $QUARTER_OFFSET -C "$DEVICE"
+    sudo hexdump -n $BYTES_TO_READ -s $QUARTER_OFFSET -C "$DEVICE"
 
     echo -e "\n=== MIDDLE (offset $MIDDLE_OFFSET) ==="
-    hexdump -n $BYTES_TO_READ -s $MIDDLE_OFFSET -C "$DEVICE"
+    sudo hexdump -n $BYTES_TO_READ -s $MIDDLE_OFFSET -C "$DEVICE"
 
     echo -e "\n=== THREE-QUARTERS (offset $THREE_QUARTER_OFFSET) ==="
-    hexdump -n $BYTES_TO_READ -s $THREE_QUARTER_OFFSET -C "$DEVICE"
+    sudo hexdump -n $BYTES_TO_READ -s $THREE_QUARTER_OFFSET -C "$DEVICE"
 
     echo -e "\n=== END OF DEVICE (offset $END_OFFSET) ==="
-    hexdump -n $BYTES_TO_READ -s $END_OFFSET -C "$DEVICE"
+    sudo hexdump -n $BYTES_TO_READ -s $END_OFFSET -C "$DEVICE"
 
     # Ask if user wants to repeat
     echo
