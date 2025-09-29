@@ -13,20 +13,17 @@ OUTPUT_FILE="$HOME/Desktop/Sales_Summary_PRINTOUT.txt"
 exec < /dev/tty
 
 # ------------------ Prepare Desktop ------------------
-# Ensure Desktop directory exists, create it if missing
 if [ ! -d "$HOME/Desktop" ]; then
   echo "Desktop directory does not exist. Creating it..."
   mkdir -p "$HOME/Desktop"
 fi
 
-# Ensure user has write permission to Desktop (exit if not)
 if [ ! -w "$HOME/Desktop" ]; then
   echo "You do not have write permissions to the Desktop directory."
   exit 1
 fi
 
 # ------------------ Ensure dependencies ------------------
-# Check for 'inxi' command, install silently if missing using the available package manager
 if ! command -v inxi >/dev/null 2>&1; then
   echo "Installing inxi..."
   if command -v apt >/dev/null 2>&1; then
@@ -42,8 +39,6 @@ if ! command -v inxi >/dev/null 2>&1; then
 fi
 
 # ------------------ macOS version selection ------------------
-# Present a list of macOS versions to select from for the sales sheet
-# This is manual because the script runs on Linux and can't auto-detect macOS versions
 mac_versions=(
   "None"
   "Mac OS X 10.0 Cheetah"
@@ -72,9 +67,9 @@ for i in "${!mac_versions[@]}"; do
   printf "%2d) %s\n" "$i" "${mac_versions[$i]}"
 done
 
-read -p "Enter number: " version_choice
+echo -n "Enter number: "
+read version_choice
 
-# Validate input; default to 'Unknown' if invalid
 if [[ "$version_choice" =~ ^[0-9]+$ ]] && [ "$version_choice" -ge 0 ] && [ "$version_choice" -lt "${#mac_versions[@]}" ]; then
   OS_NAME="${mac_versions[$version_choice]}"
 else
@@ -89,8 +84,6 @@ echo "" >> "$OUTPUT_FILE"
 echo "Operating System: $OS_NAME" >> "$OUTPUT_FILE"
 
 # ------------------ Device Manufacturer and Model ------------------
-# Attempts to get device manufacturer and model via dmidecode (needs sudo without password)
-# Falls back to inxi if dmidecode returns empty or default "To Be Filled"
 DEVICE_MANUFACTURER=""
 DEVICE_MODEL=""
 
@@ -109,7 +102,6 @@ fi
 echo "Device: ${DEVICE_MANUFACTURER:-Unknown} ${DEVICE_MODEL:-}" >> "$OUTPUT_FILE"
 
 # ------------------ CPU Information ------------------
-# Uses lscpu for CPU model and correct number of physical cores and threads
 if command -v lscpu >/dev/null 2>&1; then
   CPU_MODEL=$(lscpu | grep "Model name" | sed 's/Model name:[ \t]*//')
   PHYSICAL_CORES=$(lscpu | awk '/^Socket\(s\)/ {sockets=$2} /^Core\(s\) per socket/ {cores=$4} END {print sockets * cores}')
@@ -121,10 +113,7 @@ else
 fi
 echo "Processor: ${CPU_MODEL:-Unknown} (${PHYSICAL_CORES:-Unknown} cores / ${LOGICAL_THREADS:-Unknown} threads)" >> "$OUTPUT_FILE"
 
-
 # ------------------ RAM Information ------------------
-# Tries to get total RAM from dmidecode (needs sudo without password)
-# Otherwise falls back to 'free' and then 'inxi' for approximate value
 if command -v dmidecode >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
   TOTAL_RAM_GB=$(sudo dmidecode -t memory | grep -i 'Size:' | grep -v 'No Module Installed' | awk '{sum += $2} END {print int(sum / 1024)}')
 fi
@@ -138,7 +127,6 @@ else
 fi
 
 # ------------------ Storage ------------------
-# Attempts to detect main internal disk size and type (SSD or HDD) via lsblk
 if command -v lsblk >/dev/null 2>&1; then
   MAIN_DISK=$(lsblk -dn -o NAME,SIZE,RM,TYPE,ROTA | awk '$3 == 0 && $4 == "disk" {print $1, $2, $5}' | head -n 1)
   if [[ -n "$MAIN_DISK" ]]; then
@@ -154,7 +142,6 @@ else
 fi
 
 # ------------------ Graphics Processing Unit (GPU) ------------------
-# Uses lspci to detect GPUs; falls back to inxi if lspci missing
 if command -v lspci >/dev/null 2>&1; then
   GPUs=$(lspci | grep -i 'vga\|3d' | sed 's/.*: //')
 else
@@ -177,7 +164,6 @@ else
 fi
 
 # ------------------ Display ------------------
-# Finds the highest detected resolution using xrandr; falls back to inxi display info or Unknown
 if command -v xrandr >/dev/null 2>&1 && xrandr | grep -q '*'; then
   DISPLAY_RES=$(xrandr | grep '*' | awk '{print $1}' | sort -nr | head -n 1)
   echo "Display: ${DISPLAY_RES} (highest detected resolution)" >> "$OUTPUT_FILE"
@@ -187,28 +173,23 @@ else
 fi
 
 # ------------------ Audio Device Information ------------------
-# Detects onboard or external audio devices using inxi, lspci, or aplay
 echo "" >> "$OUTPUT_FILE"
 echo "Audio Devices:" >> "$OUTPUT_FILE"
 
 AUDIO_INFO=""
 
-# Try inxi first
 if command -v inxi >/dev/null 2>&1; then
   AUDIO_INFO=$(inxi -A 2>/dev/null | grep 'Audio:' | sed 's/^Audio:[[:space:]]*//')
 fi
 
-# If inxi fails, fall back to lspci (removing 'rev' info)
 if [[ -z "$AUDIO_INFO" ]] && command -v lspci >/dev/null 2>&1; then
   AUDIO_INFO=$(lspci | grep -i 'audio' | cut -d ':' -f3- | sed 's/ (rev .*//;s/^[ \t]*//')
 fi
 
-# Final fallback to aplay if available
 if [[ -z "$AUDIO_INFO" ]] && command -v aplay >/dev/null 2>&1; then
   AUDIO_INFO=$(aplay -l 2>/dev/null | grep '^card' | sed 's/^card [0-9]*: //' | cut -d ',' -f1)
 fi
 
-# Output result
 if [[ -n "$AUDIO_INFO" ]]; then
   echo "$AUDIO_INFO" | while read -r line; do
     echo "  $line" >> "$OUTPUT_FILE"
@@ -217,10 +198,7 @@ else
   echo "  No audio device detected" >> "$OUTPUT_FILE"
 fi
 
-
-
 # ------------------ Battery Information ------------------
-# Uses upower to get battery status, charge percentage, health (capacity), and cycles if available
 BATTERY_PATH=$(upower -e | grep battery)
 if [[ -n "$BATTERY_PATH" ]]; then
   BATTERY_INFO=$(upower -i "$BATTERY_PATH")
@@ -238,7 +216,6 @@ if [[ -n "$BATTERY_PATH" ]]; then
 fi
 
 # ------------------ Network Capabilities ------------------
-# Detects presence of Ethernet and Wi-Fi interfaces and reports
 echo "" >> "$OUTPUT_FILE"
 echo "Network Capabilities:" >> "$OUTPUT_FILE"
 
@@ -257,28 +234,37 @@ done)
 if [[ -n "$WIFI_INTERFACES" ]]; then
   echo "Has Wi-Fi" >> "$OUTPUT_FILE"
 else
-  # fallback check with inxi
   inxi -N | grep -qi "Wireless" && echo "Has Wi-Fi" >> "$OUTPUT_FILE" || echo "No Wi-Fi detected" >> "$OUTPUT_FILE"
 fi
 
-# ------------------ Bluetooth Capability ------------------
-if command -v bluetoothctl >/dev/null 2>&1 && bluetoothctl list | grep -q .; then
-  echo "Has Bluetooth" >> "$OUTPUT_FILE"
-elif [[ -d /sys/class/bluetooth ]] && [[ -n "$(ls /sys/class/bluetooth)" ]]; then
-  echo "Has Bluetooth" >> "$OUTPUT_FILE"
-else
-  inxi -E 2>/dev/null | grep -qi 'Bluetooth' && echo "Has Bluetooth" >> "$OUTPUT_FILE" || echo "No Bluetooth detected" >> "$OUTPUT_FILE"
+# ------------------ Bluetooth Capability (Safe) ------------------
+echo "" >> "$OUTPUT_FILE"
+echo "Bluetooth Capability:" >> "$OUTPUT_FILE"
+
+HAS_BLUETOOTH="No Bluetooth detected"
+
+if command -v bluetoothctl >/dev/null 2>&1; then
+  BT_LIST=$(timeout 2 bluetoothctl list 2>/dev/null)
+  [[ -n "$BT_LIST" ]] && HAS_BLUETOOTH="Has Bluetooth"
 fi
 
+if [[ "$HAS_BLUETOOTH" == "No Bluetooth detected" ]] && [[ -d /sys/class/bluetooth ]] && [[ -n "$(ls /sys/class/bluetooth 2>/dev/null)" ]]; then
+  HAS_BLUETOOTH="Has Bluetooth"
+fi
+
+if [[ "$HAS_BLUETOOTH" == "No Bluetooth detected" ]] && command -v inxi >/dev/null 2>&1; then
+  inxi -E 2>/dev/null | grep -qi 'Bluetooth' && HAS_BLUETOOTH="Has Bluetooth"
+fi
+
+echo "$HAS_BLUETOOTH" >> "$OUTPUT_FILE"
 
 # ------------------ Touchscreen Prompt ------------------
-# Asks user interactively if the device has a touchscreen and logs it if yes
-read -p "Does the device have a touchscreen? (y/N): " touch_response
-touch_response=${touch_response,,}  # convert to lowercase for comparison
+echo -n "Does the device have a touchscreen? (y/N): "
+read touch_response
+touch_response=${touch_response,,}
 [[ "$touch_response" == "y" || "$touch_response" == "yes" ]] && echo "Device Has TouchScreen" >> "$OUTPUT_FILE"
 
-# ------------------ Completion message ------------------
+# ------------------ Completion ------------------
 echo ""
 echo "System summary saved to: $OUTPUT_FILE"
-
 
