@@ -243,19 +243,29 @@ echo "Bluetooth Capability:" >> "$OUTPUT_FILE"
 
 HAS_BLUETOOTH="No Bluetooth detected"
 
+# Check with bluetoothctl
 if command -v bluetoothctl >/dev/null 2>&1; then
   BT_LIST=$(timeout 2 bluetoothctl list 2>/dev/null)
-  [[ -n "$BT_LIST" ]] && HAS_BLUETOOTH="Has Bluetooth"
+  if [[ -n "$BT_LIST" ]]; then
+    HAS_BLUETOOTH="Has Bluetooth"
+  fi
 fi
 
-if [[ "$HAS_BLUETOOTH" == "No Bluetooth detected" ]] && [[ -d /sys/class/bluetooth ]] && [[ -n "$(ls /sys/class/bluetooth 2>/dev/null)" ]]; then
-  HAS_BLUETOOTH="Has Bluetooth"
+# Check sysfs for Bluetooth class
+if [[ "$HAS_BLUETOOTH" == "No Bluetooth detected" ]]; then
+  if [[ -d /sys/class/bluetooth ]] && [[ -n "$(ls /sys/class/bluetooth 2>/dev/null)" ]]; then
+    HAS_BLUETOOTH="Has Bluetooth"
+  fi
 fi
 
-if [[ "$HAS_BLUETOOTH" == "No Bluetooth detected" ]] && command -v inxi >/dev/null 2>&1; then
-  inxi -E 2>/dev/null | grep -qi 'Bluetooth' && HAS_BLUETOOTH="Has Bluetooth"
+# Check inxi output
+if [[ "$HAS_BLUETOOTH" == "No Bluetooth detected" ]]; then
+  if command -v inxi >/dev/null 2>&1 && inxi -E 2>/dev/null | grep -qi 'Bluetooth'; then
+    HAS_BLUETOOTH="Has Bluetooth"
+  fi
 fi
 
+# Final output
 echo "$HAS_BLUETOOTH" >> "$OUTPUT_FILE"
 
 # ------------------ Touchscreen Prompt ------------------
