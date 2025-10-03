@@ -101,6 +101,18 @@ fi
 
 echo "Device: ${DEVICE_MANUFACTURER:-Unknown} ${DEVICE_MODEL:-}" >> "$OUTPUT_FILE"
 
+# ------------------ Manufacture Year ------------------
+MANUFACTURE_YEAR="Unknown"
+
+if command -v dmidecode >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+  BIOS_DATE=$(sudo dmidecode -t bios | awk -F: '/Release Date/ {print $2}' | xargs)
+  if [[ "$BIOS_DATE" =~ ([0-9]{4}) ]]; then
+    MANUFACTURE_YEAR="${BASH_REMATCH[1]}"
+  fi
+fi
+
+echo "Manufacture Year: ${MANUFACTURE_YEAR}" >> "$OUTPUT_FILE"
+
 # ------------------ CPU Information ------------------
 if command -v lscpu >/dev/null 2>&1; then
   CPU_MODEL=$(lscpu | grep "Model name" | sed 's/Model name:[ \t]*//')
