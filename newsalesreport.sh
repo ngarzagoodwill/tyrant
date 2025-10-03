@@ -266,9 +266,9 @@ touch_response=${touch_response,,}
 
 LEGACY_NOTE=$(bash "$HOME/Scripts/parse_deep_report.sh")
 
-if [[ "$LEGACY_NOTE" == *"Legacy Hardware Detected"* ]]; then
+if [[ -n "$LEGACY_NOTE" ]]; then
   echo "" >> "$OUTPUT_FILE"
-  echo "⚠️  Legacy Hardware Detected" >> "$OUTPUT_FILE"
+  echo "$LEGACY_NOTE" >> "$OUTPUT_FILE"
 fi
 
 # ------------------ Completion ------------------
