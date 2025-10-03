@@ -38,6 +38,18 @@ if ! command -v inxi >/dev/null 2>&1; then
   fi
 fi
 
+# ------------------ Manufacture Year ------------------
+MANUFACTURE_YEAR="Unknown"
+
+if command -v dmidecode >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+  BIOS_DATE=$(sudo dmidecode -t bios | awk -F: '/Release Date/ {print $2}' | xargs)
+  if [[ "$BIOS_DATE" =~ ([0-9]{4}) ]]; then
+    MANUFACTURE_YEAR="${BASH_REMATCH[1]}"
+  fi
+fi
+
+echo "Manufacture Year: ${MANUFACTURE_YEAR}" >> "$OUTPUT_FILE"
+
 # ------------------ macOS version selection ------------------
 mac_versions=(
   "None"
@@ -82,18 +94,6 @@ echo "System Specs Overview" > "$OUTPUT_FILE"
 echo "====================" >> "$OUTPUT_FILE"
 echo "" >> "$OUTPUT_FILE"
 echo "Operating System: $OS_NAME" >> "$OUTPUT_FILE"
-
-# ------------------ Manufacture Year ------------------
-MANUFACTURE_YEAR="Unknown"
-
-if command -v dmidecode >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
-  BIOS_DATE=$(sudo dmidecode -t bios | awk -F: '/Release Date/ {print $2}' | xargs)
-  if [[ "$BIOS_DATE" =~ ([0-9]{4}) ]]; then
-    MANUFACTURE_YEAR="${BASH_REMATCH[1]}"
-  fi
-fi
-
-echo "Manufacture Year: ${MANUFACTURE_YEAR}" >> "$OUTPUT_FILE"
 
 # ------------------ Device Manufacturer and Model ------------------
 DEVICE_MANUFACTURER=""
