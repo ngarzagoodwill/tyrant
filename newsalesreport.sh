@@ -262,6 +262,15 @@ read touch_response
 touch_response=${touch_response,,}
 [[ "$touch_response" == "y" || "$touch_response" == "yes" ]] && echo "Device Has TouchScreen" >> "$OUTPUT_FILE"
 
+# ------------------ Legacy Hardware Detection ------------------
+
+LEGACY_NOTE=$(bash "$HOME/Scripts/parse_deep_report.sh")
+
+if [[ "$LEGACY_NOTE" == *"Legacy Hardware Detected"* ]]; then
+  echo "" >> "$OUTPUT_FILE"
+  echo "⚠️  Legacy Hardware Detected" >> "$OUTPUT_FILE"
+fi
+
 # ------------------ Completion ------------------
 echo ""
 echo "System summary saved to: $OUTPUT_FILE"
