@@ -67,7 +67,6 @@ check_and_offer_unfreeze() {
     fi
 }
 
-# Main logic
 echo -e "${YELLOW}Detecting all block devices...${NC}"
 lsblk -o NAME,SIZE,ROTA,TYPE,MOUNTPOINT,MODEL
 
@@ -110,8 +109,7 @@ fi
 DEVICE="/dev/$target"
 echo -e "${GREEN}Targeting device: $DEVICE${NC}"
 
-# Detect if device is rotational (HDD)
-is_rotational=$(cat /sys/block/$target/queue/rotational 2>/dev/null || echo 0)
+is_rotational=$(cat /sys/block/"${target%%[0-9]*}"/queue/rotational)
 
 if [[ $is_rotational -eq 1 ]]; then
     echo "Drive $DEVICE is a HDD (rotational)."
@@ -129,16 +127,11 @@ elif [[ $target == nvme* ]]; then
 
     run_confirmed "sudo nvme list"
 
-    # Try secure erase with nvme-cli
-    echo -e "${YELLOW}Trying NVMe secure erase...${NC}"
-    run_confirmed "sudo nvme id-ctrl $DEVICE"
-    run_confirmed "sudo nvme id-ns $DEVICE -n 1"
-
-    if run_confirmed "sudo nvme format $DEVICE --lbaf=0 --ses=1 --force"; then
+    echo -e "${YELLOW}Running NVMe secure erase (format --ses=1 --force)...${NC}"
+    if run_confirmed "sudo nvme format $DEVICE --ses=1 --force"; then
         echo -e "${GREEN}✅ NVMe secure erase succeeded. Skipping dd.${NC}"
     else
-        echo -e "${RED}❌ NVMe secure erase failed. Falling back to dd...${NC}"
-        run_confirmed "sudo blkdiscard -f $DEVICE"
+        echo -e "${RED}❌ NVMe secure erase failed or skipped. Falling back to dd...${NC}"
         run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress"
     fi
 
@@ -198,5 +191,5 @@ fi
 echo "Cleaning root Trash..."
 run_confirmed "sudo rm -rf /root/.local/share/Trash/*"
 
-echo -e "${GREEN}Wipe process complete.${NC}"
+echo -e "${GREEN}Wipe process complete.${NC}" 
 
