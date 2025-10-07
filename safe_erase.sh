@@ -114,7 +114,7 @@ is_rotational=$(cat /sys/block/"${target%%[0-9]*}"/queue/rotational)
 if [[ $is_rotational -eq 1 ]]; then
     echo "Drive $DEVICE is a HDD (rotational)."
     run_confirmed "sudo umount $DEVICE || true"
-    run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress"
+    run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress conv=fsync"
     run_confirmed "sudo hexdump -n 256 -C $DEVICE"
 
 elif [[ $target == nvme* ]]; then
@@ -132,7 +132,7 @@ elif [[ $target == nvme* ]]; then
         echo -e "${GREEN}✅ NVMe secure erase succeeded. Skipping dd.${NC}"
     else
         echo -e "${RED}❌ NVMe secure erase failed or skipped. Falling back to dd...${NC}"
-        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress"
+        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress conv=fsync"
     fi
 
     run_confirmed "sudo hexdump -n 256 -C $DEVICE"
@@ -149,7 +149,7 @@ elif [[ $target == mmcblk* ]]; then
         echo -e "${GREEN}✅ eMMC secure erase succeeded.${NC}"
     else
         echo -e "${RED}❌ eMMC erase failed. Falling back to dd...${NC}"
-        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress"
+        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress conv=fsync"
     fi
 
     run_confirmed "sudo hexdump -n 256 -C $DEVICE"
@@ -177,12 +177,12 @@ else
                 echo -e "${GREEN}✅ Normal secure erase succeeded. Skipping dd.${NC}"
             else
                 echo -e "${RED}❌ Normal secure erase failed. Falling back to dd...${NC}"
-                run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress"
+                run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress conv=fsync"
             fi
         fi
     else
         echo -e "${RED}❌ Failed to set security password. Falling back to dd...${NC}"
-        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress"
+        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress conv=fsync"
     fi
 
     run_confirmed "sudo dd if=$DEVICE bs=1M count=20 | hexdump -C"
