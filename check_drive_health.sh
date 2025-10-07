@@ -76,8 +76,7 @@ while true; do
             echo "✅ Basic health check completed."
         fi
 
-    elif [[ "$type" == "disk" && "$drive" == nvme* ]]; then
-        # NVMe fallback
+    elif [[ "$drive" == nvme* ]]; then
         echo "ℹ️ SMART not supported via smartctl, but NVMe drive detected. Using nvme-cli..."
         echo "🩺 Running NVMe health check on $DEVICE..."
         sudo nvme smart-log "$DEVICE"
