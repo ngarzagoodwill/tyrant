@@ -230,23 +230,46 @@ fi
 echo "" >> "$OUTPUT_FILE"
 echo "Network Capabilities:" >> "$OUTPUT_FILE"
 
-ETH_INTERFACES=$(ls /sys/class/net | grep -v lo | while read -r iface; do
+# Detect Ethernet interfaces robustly
+ETH_INTERFACES=""
+for iface_path in /sys/class/net/*; do
+  iface=$(basename "$iface_path")
+  [[ "$iface" == "lo" ]] && continue
+  # Check if ethtool can access the device, then match Ethernet names
   if ethtool "$iface" &>/dev/null; then
-    [[ "$iface" == en* || "$iface" == eth* ]] && echo "$iface"
+    if [[ "$iface" == en* || "$iface" == eth* ]]; then
+      ETH_INTERFACES+="$iface "
+    fi
   fi
-done)
+done
 
-[[ -n "$ETH_INTERFACES" ]] && echo "Has Ethernet" >> "$OUTPUT_FILE" || echo "No Ethernet detected" >> "$OUTPUT_FILE"
+if [[ -n "$ETH_INTERFACES" ]]; then
+  echo "Has Ethernet: $ETH_INTERFACES" >> "$OUTPUT_FILE"
+else
+  echo "No Ethernet detected" >> "$OUTPUT_FILE"
+fi
 
-WIFI_INTERFACES=$(ls /sys/class/net | grep -v lo | while read -r iface; do
-  [[ -d "/sys/class/net/$iface/wireless" ]] && echo "$iface"
-done)
+# Detect Wi-Fi interfaces robustly
+WIFI_INTERFACES=""
+for iface_path in /sys/class/net/*; do
+  iface=$(basename "$iface_path")
+  [[ "$iface" == "lo" ]] && continue
+  if [[ -d "$iface_path/wireless" ]]; then
+    WIFI_INTERFACES+="$iface "
+  fi
+done
 
 if [[ -n "$WIFI_INTERFACES" ]]; then
-  echo "Has Wi-Fi" >> "$OUTPUT_FILE"
+  echo "Has Wi-Fi: $WIFI_INTERFACES" >> "$OUTPUT_FILE"
 else
-  inxi -N | grep -Eiq "Wireless|Wi-Fi" && echo "Has Wi-Fi" >> "$OUTPUT_FILE" || echo "No Wi-Fi detected" >> "$OUTPUT_FILE"
+  # Fallback: try inxi for Wi-Fi detection
+  if inxi -N | grep -Eiq "Wireless|Wi-Fi"; then
+    echo "Has Wi-Fi" >> "$OUTPUT_FILE"
+  else
+    echo "No Wi-Fi detected" >> "$OUTPUT_FILE"
+  fi
 fi
+
 
 # ------------------ Bluetooth Capability (Strict Only) ------------------
 echo "" >> "$OUTPUT_FILE"
