@@ -140,15 +140,14 @@ fi
 
 # ------------------ Storage ------------------
 if command -v lsblk >/dev/null 2>&1; then
-  MAIN_DISK=$(lsblk -dn -o NAME,SIZE,RM,TYPE,ROTA | awk '$3 == 0 && $4 == "disk" {print $1, $2, $5}' | head -n 1)
-  if [[ -n "$MAIN_DISK" ]]; then
-    DISK_SIZE=$(echo "$MAIN_DISK" | awk '{print $2}')
-    ROTA_FLAG=$(echo "$MAIN_DISK" | awk '{print $3}')
-    DISK_TYPE=$([[ "$ROTA_FLAG" == "0" ]] && echo "SSD" || echo "HDD")
-    echo "Storage: $DISK_SIZE ($DISK_TYPE)" >> "$OUTPUT_FILE"
-  else
-    echo "Storage: No internal drive detected" >> "$OUTPUT_FILE"
-  fi
+  echo "Storage:" >> "$OUTPUT_FILE"
+
+  count=1
+  lsblk -dn -o NAME,SIZE,RM,TYPE,ROTA | awk '$3 == 0 && $4 == "disk"' | while read -r name size rm type rota; do
+    DISK_TYPE=$([[ "$rota" == "0" ]] && echo "SSD" || echo "HDD")
+    echo "  $count) $name - $size ($DISK_TYPE)" >> "$OUTPUT_FILE"
+    ((count++))
+  done
 else
   echo "Storage: Unknown" >> "$OUTPUT_FILE"
 fi
