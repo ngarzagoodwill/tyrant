@@ -246,7 +246,7 @@ done)
 if [[ -n "$WIFI_INTERFACES" ]]; then
   echo "Has Wi-Fi" >> "$OUTPUT_FILE"
 else
-  inxi -N | grep -qi "Wireless" && echo "Has Wi-Fi" >> "$OUTPUT_FILE" || echo "No Wi-Fi detected" >> "$OUTPUT_FILE"
+  inxi -N | grep -Eiq "Wireless|Wi-Fi" && echo "Has Wi-Fi" >> "$OUTPUT_FILE" || echo "No Wi-Fi detected" >> "$OUTPUT_FILE"
 fi
 
 # ------------------ Bluetooth Capability (Strict Only) ------------------
@@ -255,17 +255,12 @@ echo "Bluetooth Capability:" >> "$OUTPUT_FILE"
 
 HAS_BLUETOOTH="No Bluetooth detected"
 
-# 1. Strictest check: Use hciconfig to find active Bluetooth interfaces
 if command -v hciconfig >/dev/null 2>&1; then
   if hciconfig -a | grep -q '^hci'; then
     HAS_BLUETOOTH="Has Bluetooth"
   fi
 fi
 
-# Optional: Log why it failed (for debugging)
-# echo "hciconfig check: $HAS_BLUETOOTH" >> "$OUTPUT_FILE"
-
-# Final output
 echo "$HAS_BLUETOOTH" >> "$OUTPUT_FILE"
 
 # ------------------ Touchscreen Prompt ------------------
@@ -275,7 +270,6 @@ touch_response=${touch_response,,}
 [[ "$touch_response" == "y" || "$touch_response" == "yes" ]] && echo "Device Has TouchScreen" >> "$OUTPUT_FILE"
 
 # ------------------ Legacy Hardware Detection ------------------
-
 LEGACY_NOTE=$(bash "$HOME/Scripts/parse_deep_report.sh")
 
 if [[ -n "$LEGACY_NOTE" ]]; then
