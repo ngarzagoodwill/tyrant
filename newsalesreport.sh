@@ -281,3 +281,10 @@ fi
 echo ""
 echo "System summary saved to: $OUTPUT_FILE"
 
+# Open the output file in Mint's default text editor (xed)
+if command -v xed >/dev/null 2>&1; then
+  xed "$OUTPUT_FILE" &
+else
+  echo "xed not found. Please open the file manually: $OUTPUT_FILE"
+fi
+
