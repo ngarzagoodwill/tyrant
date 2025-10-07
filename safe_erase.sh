@@ -127,11 +127,15 @@ elif [[ $target == nvme* ]]; then
 
     run_confirmed "sudo nvme list"
 
-    echo -e "${YELLOW}Running NVMe secure erase (format --ses=1 --force)...${NC}"
-    if run_confirmed "sudo nvme format $DEVICE --ses=1 --force"; then
-        echo -e "${GREEN}✅ NVMe secure erase succeeded. Skipping dd.${NC}"
+    echo -e "${YELLOW}Attempting NVMe secure erase...${NC}"
+    if run_confirmed "sudo nvme format $DEVICE --lbaf=0 --ses=1 --force"; then
+        echo -e "${GREEN}✅ NVMe secure erase (user data erase) succeeded. Skipping dd.${NC}"
+    elif run_confirmed "sudo nvme format $DEVICE --lbaf=0 --ses=2 --force"; then
+        echo -e "${GREEN}✅ NVMe secure erase (crypto erase) succeeded. Skipping dd.${NC}"
+    elif run_confirmed "sudo blkdiscard -f $DEVICE"; then
+        echo -e "${GREEN}✅ blkdiscard succeeded. Skipping dd.${NC}"
     else
-        echo -e "${RED}❌ NVMe secure erase failed or skipped. Falling back to dd...${NC}"
+        echo -e "${RED}❌ NVMe erase failed. Falling back to zeroing with dd...${NC}"
         run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress"
     fi
 
@@ -164,32 +168,5 @@ else
     check_and_offer_unfreeze "$DEVICE"
 
     run_confirmed "sudo umount ${DEVICE}* || true"
-    run_confirmed "sudo sync"
-
-    echo "Setting temporary security password..."
-    if run_confirmed "sudo hdparm --user-master u --security-set-pass Pwd1234! $DEVICE"; then
-        echo "Trying enhanced secure erase first..."
-        if run_confirmed "sudo hdparm --user-master u --security-erase-enhanced Pwd1234! $DEVICE"; then
-            echo -e "${GREEN}✅ Enhanced secure erase succeeded. Skipping fallback and dd.${NC}"
-        else
-            echo -e "${RED}❌ Enhanced secure erase failed. Trying normal secure erase...${NC}"
-            if run_confirmed "sudo hdparm --user-master u --security-erase Pwd1234! $DEVICE"; then
-                echo -e "${GREEN}✅ Normal secure erase succeeded. Skipping dd.${NC}"
-            else
-                echo -e "${RED}❌ Normal secure erase failed. Falling back to dd...${NC}"
-                run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress"
-            fi
-        fi
-    else
-        echo -e "${RED}❌ Failed to set security password. Falling back to dd...${NC}"
-        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress"
-    fi
-
-    run_confirmed "sudo dd if=$DEVICE bs=1M count=20 | hexdump -C"
-fi
-
-echo "Cleaning root Trash..."
-run_confirmed "sudo rm -rf /root/.local/share/Trash/*"
-
-echo -e "${GREEN}Wipe process complete.${NC}" 
+    run_confirm
 
