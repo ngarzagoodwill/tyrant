@@ -208,5 +208,22 @@ else
         else
             echo -e "${RED}❌ Enhanced secure erase failed. Trying normal secure erase...${NC}"
             if run_confirmed "sudo hdparm --user-master u --security-erase Pwd1234! $DEVICE"; then
-                echo -e
+                echo -e "${GREEN}✅ Normal secure erase succeeded. Skipping dd.${NC}"
+            else
+                echo -e "${RED}❌ Normal secure erase failed. Falling back to dd...${NC}"
+                run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress $dd_flag"
+            fi
+        fi
+    else
+        echo -e "${RED}❌ Failed to set security password. Falling back to dd...${NC}"
+        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress $dd_flag"
+    fi
+
+    run_confirmed "sudo dd if=$DEVICE bs=1M count=20 | hexdump -C"
+fi
+
+echo "Cleaning root Trash..."
+run_confirmed "sudo rm -rf /root/.local/share/Trash/*"
+
+echo -e "${GREEN}Wipe process complete.${NC}"
 
