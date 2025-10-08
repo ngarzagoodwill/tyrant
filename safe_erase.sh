@@ -6,6 +6,26 @@ GREEN="\e[32m"
 YELLOW="\e[33m"
 NC="\e[0m"
 
+# --- RAM selection block ---
+echo "Select your system RAM size:"
+echo " 1) 2 GB"
+echo " 2) 4 GB"
+echo " 3) 8 GB"
+echo " 4) 16 GB"
+echo " 5) 32 GB"
+read -rp "Enter a number (1–5): " ram_choice
+
+case $ram_choice in
+  1) dd_bs="32M" ;;
+  2) dd_bs="64M" ;;
+  3) dd_bs="100M" ;;
+  4) dd_bs="128M" ;;
+  5) dd_bs="256M" ;;
+  *) echo "Invalid selection. Defaulting to bs=64M"; dd_bs="64M" ;;
+esac
+
+echo -e "${YELLOW}Block size for dd set to: $dd_bs${NC}"
+
 # Function to run a command interactively
 run_confirmed() {
     echo -e "\nCommand:\n$1"
@@ -114,7 +134,7 @@ is_rotational=$(cat /sys/block/"${target%%[0-9]*}"/queue/rotational)
 if [[ $is_rotational -eq 1 ]]; then
     echo "Drive $DEVICE is a HDD (rotational)."
     run_confirmed "sudo umount $DEVICE || true"
-    run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress conv=fsync"
+    run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress conv=fsync"
     run_confirmed "sudo hexdump -n 256 -C $DEVICE"
 
 elif [[ $target == nvme* ]]; then
@@ -132,7 +152,7 @@ elif [[ $target == nvme* ]]; then
         echo -e "${GREEN}✅ NVMe secure erase succeeded. Skipping dd.${NC}"
     else
         echo -e "${RED}❌ NVMe secure erase failed or skipped. Falling back to dd...${NC}"
-        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress conv=fsync"
+        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress conv=fsync"
     fi
 
     run_confirmed "sudo hexdump -n 256 -C $DEVICE"
@@ -149,7 +169,7 @@ elif [[ $target == mmcblk* ]]; then
         echo -e "${GREEN}✅ eMMC secure erase succeeded.${NC}"
     else
         echo -e "${RED}❌ eMMC erase failed. Falling back to dd...${NC}"
-        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress conv=fsync"
+        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress conv=fsync"
     fi
 
     run_confirmed "sudo hexdump -n 256 -C $DEVICE"
@@ -177,12 +197,12 @@ else
                 echo -e "${GREEN}✅ Normal secure erase succeeded. Skipping dd.${NC}"
             else
                 echo -e "${RED}❌ Normal secure erase failed. Falling back to dd...${NC}"
-                run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress conv=fsync"
+                run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress conv=fsync"
             fi
         fi
     else
         echo -e "${RED}❌ Failed to set security password. Falling back to dd...${NC}"
-        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=100M status=progress conv=fsync"
+        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress conv=fsync"
     fi
 
     run_confirmed "sudo dd if=$DEVICE bs=1M count=20 | hexdump -C"
