@@ -26,6 +26,20 @@ esac
 
 echo -e "${YELLOW}Block size for dd set to: $dd_bs${NC}"
 
+# --- dd flush method selection ---
+echo "Choose dd flush method:"
+echo " 1) conv=fsync"
+echo " 2) oflag=direct"
+read -rp "Enter a number (1–2): " flush_choice
+
+case $flush_choice in
+  1) dd_flag="conv=fsync" ;;
+  2) dd_flag="oflag=direct" ;;
+  *) echo "Invalid selection. Defaulting to conv=fsync"; dd_flag="conv=fsync" ;;
+esac
+
+echo -e "${YELLOW}dd flush method set to: $dd_flag${NC}"
+
 # Function to run a command interactively
 run_confirmed() {
     echo -e "\nCommand:\n$1"
@@ -134,7 +148,7 @@ is_rotational=$(cat /sys/block/"${target%%[0-9]*}"/queue/rotational)
 if [[ $is_rotational -eq 1 ]]; then
     echo "Drive $DEVICE is a HDD (rotational)."
     run_confirmed "sudo umount $DEVICE || true"
-    run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress conv=fsync"
+    run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress $dd_flag"
     run_confirmed "sudo hexdump -n 256 -C $DEVICE"
 
 elif [[ $target == nvme* ]]; then
@@ -152,7 +166,7 @@ elif [[ $target == nvme* ]]; then
         echo -e "${GREEN}✅ NVMe secure erase succeeded. Skipping dd.${NC}"
     else
         echo -e "${RED}❌ NVMe secure erase failed or skipped. Falling back to dd...${NC}"
-        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress conv=fsync"
+        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress $dd_flag"
     fi
 
     run_confirmed "sudo hexdump -n 256 -C $DEVICE"
@@ -169,7 +183,7 @@ elif [[ $target == mmcblk* ]]; then
         echo -e "${GREEN}✅ eMMC secure erase succeeded.${NC}"
     else
         echo -e "${RED}❌ eMMC erase failed. Falling back to dd...${NC}"
-        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress conv=fsync"
+        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress $dd_flag"
     fi
 
     run_confirmed "sudo hexdump -n 256 -C $DEVICE"
@@ -194,22 +208,5 @@ else
         else
             echo -e "${RED}❌ Enhanced secure erase failed. Trying normal secure erase...${NC}"
             if run_confirmed "sudo hdparm --user-master u --security-erase Pwd1234! $DEVICE"; then
-                echo -e "${GREEN}✅ Normal secure erase succeeded. Skipping dd.${NC}"
-            else
-                echo -e "${RED}❌ Normal secure erase failed. Falling back to dd...${NC}"
-                run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress conv=fsync"
-            fi
-        fi
-    else
-        echo -e "${RED}❌ Failed to set security password. Falling back to dd...${NC}"
-        run_confirmed "sudo dd if=/dev/zero of=$DEVICE bs=$dd_bs status=progress conv=fsync"
-    fi
-
-    run_confirmed "sudo dd if=$DEVICE bs=1M count=20 | hexdump -C"
-fi
-
-echo "Cleaning root Trash..."
-run_confirmed "sudo rm -rf /root/.local/share/Trash/*"
-
-echo -e "${GREEN}Wipe process complete.${NC}"
+                echo -e
 
