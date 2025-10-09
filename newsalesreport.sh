@@ -154,12 +154,13 @@ fi
 
 # ------------------ Graphics Processing Unit (GPU) ------------------
 if command -v lspci >/dev/null 2>&1; then
-  GPUs=$(lspci | grep -i 'vga\|3d' | sed 's/.*: //')
+  # Extract GPU lines and remove unnecessary revision info
+  GPUs=$(lspci | grep -iE 'VGA compatible controller|3D controller|Display controller' | sed -E 's/.*: //; s/ \(rev .*//')
 else
   GPUs=$(inxi -G | grep 'Graphics:' | awk -F: '{print $2}' | xargs)
 fi
 
-GPU_COUNT=$(echo "$GPUs" | wc -l)
+GPU_COUNT=$(echo "$GPUs" | grep -c .)
 
 if [[ "$GPU_COUNT" -eq 0 ]]; then
   echo "Graphics: No GPU detected" >> "$OUTPUT_FILE"
@@ -173,6 +174,7 @@ else
     ((count++))
   done
 fi
+
 
 # ------------------ Display ------------------
 if command -v xrandr >/dev/null 2>&1 && xrandr | grep -q '*'; then
