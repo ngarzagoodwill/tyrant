@@ -6,23 +6,27 @@ GREEN="\e[32m"
 YELLOW="\e[33m"
 NC="\e[0m"
 
-# -------- RAM Selection Block --------
-echo "Select your system RAM size:"
-echo " 1) 2 GB"
-echo " 2) 4 GB"
-echo " 3) 8 GB"
-echo " 4) 16 GB"
-echo " 5) 32 GB"
-read -rp "Enter a number (1–5): " ram_choice
+# -------- Auto Detect RAM Size --------
+echo -e "${YELLOW}Detecting system RAM...${NC}"
 
-case $ram_choice in
-  1) dd_bs="32M" ;;
-  2) dd_bs="64M" ;;
-  3) dd_bs="100M" ;;
-  4) dd_bs="128M" ;;
-  5) dd_bs="256M" ;;
-  *) echo "Invalid selection. Defaulting to bs=64M"; dd_bs="64M" ;;
-esac
+# Get total RAM in MB
+total_ram_mb=$(grep MemTotal /proc/meminfo | awk '{print int($2/1024)}')
+echo -e "Total system RAM: ${total_ram_mb} MB"
+
+# Set dd block size based on RAM ranges
+if (( total_ram_mb <= 2048 )); then
+  dd_bs="32M"
+elif (( total_ram_mb <= 4096 )); then
+  dd_bs="64M"
+elif (( total_ram_mb <= 8192 )); then
+  dd_bs="100M"
+elif (( total_ram_mb <= 16384 )); then
+  dd_bs="128M"
+elif (( total_ram_mb <= 32768 )); then
+  dd_bs="256M"
+else
+  dd_bs="512M"  # for larger systems
+fi
 
 echo -e "${YELLOW}Block size for dd set to: $dd_bs${NC}"
 
