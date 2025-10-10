@@ -120,6 +120,27 @@ mkdir -p "$OUTPUT_DIR"
   done
   echo ""
 
+  # TPM Info
+  echo "--- TPM Info (if available) ---"
+  if command -v tpm2_getcap >/dev/null 2>&1; then
+    sudo tpm2_getcap properties-fixed 2>/dev/null
+  elif [ -c /dev/tpm0 ]; then
+    echo "TPM device found: /dev/tpm0"
+  else
+    echo "No TPM detected"
+  fi
+  echo ""
+
+  # Secure Boot Info
+  echo "--- Secure Boot Status ---"
+  if command -v mokutil >/dev/null 2>&1; then
+    mokutil --sb-state 2>/dev/null
+  else
+    echo "mokutil not available"
+  fi
+  echo ""
+
+
 } > "$OUTPUT_FILE"
 
 echo "Deep hardware dump saved to: $OUTPUT_FILE"
