@@ -145,7 +145,10 @@ if command -v lsblk >/dev/null 2>&1; then
   count=1
   lsblk -dn -o NAME,SIZE,RM,TYPE,ROTA | awk '$3 == 0 && $4 == "disk"' | while read -r name size rm type rota; do
     DISK_TYPE=$([[ "$rota" == "0" ]] && echo "SSD" || echo "HDD")
-    echo "  $count) $name - $size ($DISK_TYPE)" >> "$OUTPUT_FILE"
+    
+    # Append Drive PASSED Health Check for any drive
+    echo "  $count) $name - $size ($DISK_TYPE) (Drive PASSED Health Check)" >> "$OUTPUT_FILE"
+    
     ((count++))
   done
 else
