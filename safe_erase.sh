@@ -7,12 +7,45 @@ YELLOW="\e[33m"
 NC="\e[0m"
 
 # ---------------- Logging Setup ----------------
+# ---------------- Logging Setup ----------------
 LOG_DIR="/home/mint/Scripts/Logs"
 mkdir -p "$LOG_DIR"  # Make sure log directory exists
 
 LOG_FILE="$LOG_DIR/wipe_log_$(date +%F_%H-%M-%S).log"
 echo -e "${YELLOW}Logging to: $LOG_FILE${NC}"
 echo "========== Wipe Script Started at $(date '+%F %T') ==========" >> "$LOG_FILE"
+
+# -------- Function: run_confirmed --------
+run_confirmed() {
+  echo -e "\nCommand:\n$1"
+  read -rp "Run this command? (y/n): " confirm
+  local now
+  now=$(date '+%F %T')
+
+  if [[ $confirm == "y" ]]; then
+    set +e
+    # Run the command and capture output
+    output=$(eval "$1" 2>&1)
+    local status=$?
+
+    if [[ $status -eq 0 ]]; then
+      echo -e "${GREEN}✅ Command succeeded: $1${NC}"
+      echo "[$now] ✅ Ran: $1" >> "$LOG_FILE"
+      echo "$output" >> "$LOG_FILE"
+    else
+      echo -e "${RED}❌ Command failed: $1${NC}"
+      echo "[$now] ❌ Failed: $1 (exit code: $status)" >> "$LOG_FILE"
+      echo "$output" >> "$LOG_FILE"
+    fi
+
+    return $status
+  else
+    echo "Skipped."
+    echo "[$now] ⏭️ Skipped: $1" >> "$LOG_FILE"
+    return 1
+  fi
+}
+
 
 # -------- Auto Detect RAM Size --------
 echo -e "${YELLOW}Detecting system RAM...${NC}"
