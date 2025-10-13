@@ -152,7 +152,7 @@ if command -v lsblk >/dev/null 2>&1; then
     ((count++))
   done
 else
-  echo "Storage: Unknown" >> "$OUTPUT_FILE"
+  echo "Storage: None" >> "$OUTPUT_FILE"
 fi
 
 # ------------------ Graphics Processing Unit (GPU) ------------------
