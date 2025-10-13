@@ -287,15 +287,17 @@ fi
 
 echo "$HAS_BLUETOOTH" >> "$OUTPUT_FILE"
 
+echo >> $OUTPUT_FILE
 # ------------------ Touchscreen Prompt ------------------
 echo -n "Does the device have a touchscreen? (y/N): "
 read touch_response
 touch_response=${touch_response,,}
 [[ "$touch_response" == "y" || "$touch_response" == "yes" ]] && echo "Device Has TouchScreen" >> "$OUTPUT_FILE"
 
-
+echo >> $OUTPUT_FILE
 # ------------------ Note system was boot into a live linux usb to obtain specsheet ------
-echo "This Spec Sheet was obtained by running a live Linux distro from usb." >> "$OUTPUT_FILE"
+echo "SPEC SHEET OBTAINED BY:"
+echo "Live USB Linux Mint Distro" >> "$OUTPUT_FILE"
 
 # ------------------ Legacy Hardware Detection ------------------
 LEGACY_NOTE=$(bash "$HOME/Scripts/parse_deep_report.sh")
