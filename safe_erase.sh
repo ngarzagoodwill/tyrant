@@ -6,6 +6,14 @@ GREEN="\e[32m"
 YELLOW="\e[33m"
 NC="\e[0m"
 
+# ---------------- Logging Setup ----------------
+LOG_DIR="/home/mint/Scripts/Logs"
+mkdir -p "$LOG_DIR"  # Make sure log directory exists
+
+LOG_FILE="$LOG_DIR/wipe_log_$(date +%F_%H-%M-%S).log"
+echo -e "${YELLOW}Logging to: $LOG_FILE${NC}"
+echo "========== Wipe Script Started at $(date '+%F %T') ==========" >> "$LOG_FILE"
+
 # -------- Auto Detect RAM Size --------
 echo -e "${YELLOW}Detecting system RAM...${NC}"
 
