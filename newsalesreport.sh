@@ -296,7 +296,7 @@ touch_response=${touch_response,,}
 
 echo >> $OUTPUT_FILE
 # ------------------ Note system was boot into a live linux usb to obtain specsheet ------
-echo "SPEC SHEET OBTAINED BY:"
+echo "SPEC SHEET OBTAINED BY:" >> "$OUTPUT_FILE"
 echo "Live USB Linux Mint Distro" >> "$OUTPUT_FILE"
 
 # ------------------ Legacy Hardware Detection ------------------
