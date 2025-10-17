@@ -301,6 +301,9 @@ echo >> $OUTPUT_FILE
 # ------------------ Note system was boot into a live linux usb to obtain specsheet ------
 echo "SPEC SHEET OBTAINED BY:" >> "$OUTPUT_FILE"
 echo "Live USB Linux Mint Distro" >> "$OUTPUT_FILE"
+echo >> "$OUTPUT_FILE" 
+echo "Note: Reported manufacture/model year may differ due to board replacements, firmware changes, or misread system data. Verify with serial or hardware check." >> "$OUTPUT_FILE"
+
 
 # ------------------ Legacy Hardware Detection ------------------
 LEGACY_NOTE=$(bash "$HOME/Scripts/parse_deep_report.sh")
